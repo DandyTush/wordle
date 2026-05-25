@@ -22,27 +22,40 @@ for w in words:
 overall_letter_count = letter_count("".join(words))
 
 def popularity(word):
-    score = 0
-    seen_letters = {}
-    for letter in word:
-        if letter not in seen_letters:
-            score += overall_letter_count[letter]
-        seen_letters[letter] = True
-    return score
+    return weighted_popularity([word])
 
 """
-weighted_popularity - if more popular letters found in the beginning, that's
+weighted_popularity - if more popular lettesrs found in the beginning, that's
 good for the score. Popularity benefit decreases if popular letters found
 towards end.
 """
-def weighted_popularity(words, decay=0.8):
+def weighted_popularity(words, decay=0.9):
     score = 0.0
     factor = 1.0
+    seen_letters = {}
     for word in words:
-        score += factor * popularity(word)
+        for letter in word:
+            if letter not in seen_letters:
+                score += overall_letter_count[letter] * factor
+            seen_letters[letter] = True
         factor *= decay
     return score
 
+'''
+letters_then_popularity - first scores by number of unique letters, then by weighted popularity of letters
+'''
+def letters_then_popularity(words):
+    whole_part = 0.0
+    fraction_part = weighted_popularity(words) / 50000.0
+    seen_letters = {}
+    for word in words:
+        for letter in word:
+            if letter not in seen_letters:
+                whole_part += 1.0
+            seen_letters[letter] = True
+    return whole_part + fraction_part
+
+score_function = letters_then_popularity
 
 virginias_starting_words = ["truly", "grade", "pound", "shirk"]
 print(virginias_starting_words)
@@ -59,7 +72,21 @@ print(f"The overall letter frequencies are: {sort_dict_decreasing_values(overall
 
 print(f"Finding best N=3 starting words with unique letters and max popularity")
 
-word_set_for_best_N_test = words_with_unique_letters
+words_with_unique_letters_scores = {}
+for w in words_with_unique_letters:
+    words_with_unique_letters_scores[w] = popularity(w)
+
+words_with_unique_letters_ordered = list(sort_dict_decreasing_values(words_with_unique_letters_scores).keys())
+
+#print(words_with_unique_letters_ordered)
+
+#exit()
+
+word_set_for_best_N_test = words_with_unique_letters_ordered
+
+# Precomputed
+#word_set_for_best_N_test = ['later', 'scion', 'dumpy']
+
 threepicks = []
 
 w1_test_indices = range(len(word_set_for_best_N_test))
@@ -78,19 +105,21 @@ for w1_index in w1_test_indices:
         for w3_index in range(w2_index, len(word_set_for_best_N_test)):
             w3 = word_set_for_best_N_test[w3_index]
             bigword = w1+w2+w3
+            if has_repeat_letters(bigword):
+                continue
             n3 = [w1, w2, w3]
-            score = weighted_popularity(n3)
+            score = score_function(n3)
             n3_weighted_popularities[bigword] = score
             if score > best_n3_score:
                 best_n3 = n3
                 best_n3_score = score
-            if has_repeat_letters(bigword):
-                continue
             threepicks.append(n3)
 
 print(f"Best starting 3: {sort_dict_decreasing_values(n3_weighted_popularities)}")
 
 print(f"Best N3: {best_n3} score: {best_n3_score}")
+
+word_set_for_best_N_test = words
 
 best_n4 = []
 best_n4_score = 0.0
@@ -98,19 +127,26 @@ best_n4_score = 0.0
 for w4 in word_set_for_best_N_test:
     if w4 in best_n3:
         continue
-    n4 = n3 + [w4]
-    score = weighted_popularity(n4)
+    n4 = best_n3 + [w4]
+    #if has_repeat_letters("".join(n4)):
+    #    continue
+    score = score_function(n4)
     if score > best_n4_score:
         best_n4_score = score
         best_n4 = n4
 
 print(f"Best N4: {best_n4} score: {best_n4_score}")
 
+best_n5 = []
+best_n5_score = 0.0
+
 for w5 in word_set_for_best_N_test:
     if w5 in best_n4:
         continue
-    n5 = n4 + [w5]
-    score = weighted_popularity(n5)
+    n5 = best_n4 + [w5]
+    #if has_repeat_letters("".join(n5)):
+    #    continue
+    score = score_function(n5)
     if score > best_n5_score:
         best_n5_score = score
         best_n5 = n5
